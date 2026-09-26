@@ -1,67 +1,57 @@
-import express from 'express';
-import cors from 'cors';
-import fs from 'fs';
+const express = require('express');
+const cors = require('cors');
+const { default: makeWASocket, useMultiFileAuthState, delay } = require('@whiskeysockets/baileys');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-
-// Home - kuona kama board iko live
 app.get('/', (req, res) => {
-  res.json({ 
-    status: 'MTAANI CLOUD ENGINEER BOARD LIVE ✅',
-    owner: 'musauvincent76-source',
-    endpoints: ['/pair', '/sessions', '/']
-  });
-});
-
-// Sessions folder
-if (!fs.existsSync('./sessions')) {
-  fs.mkdirSync('./sessions');
-}
-
-app.get('/sessions', (req, res) => {
-  const files = fs.readdirSync('./sessions');
-  res.json({ total: files.length, sessions: files });
-});
-
-// Pairing API - hii ndio website yako itaita
-app.get('/pair', (req, res) => {
-  res.json({ 
-    message: 'Use POST with { number: 2547... }',
-    example: 'POST /pair { "number": "254703182307" }'
-  });
+  res.send('MTAANI CLOUD ENGINEER BOARD LIVE ✅ - /pair ready');
 });
 
 app.post('/pair', async (req, res) => {
-  const { number } = req.body;
-  if (!number) return res.status(400).json({ error: 'Number required e.g 254703182307' });
+  let { number } = req.body;
+  if (!number) return res.status(400).json({ error: 'Number required' });
   
+  number = number.replace(/[^0-9]/g, '');
+  if (!number.startsWith('254')) return res.status(400).json({ error: 'Number must start with 254' });
+
+  const sessionDir = path.join(__dirname, 'sessions', number);
+  if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+
   try {
-    const { default: makeWASocket, useMultiFileAuthState } = await import('@whiskeysockets/baileys');
-    const { state, saveCreds } = await useMultiFileAuthState(`./sessions/${number}`);
-    
+    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     const sock = makeWASocket({
       auth: state,
       printQRInTerminal: false,
-      logger: { level: 'silent', child: () => ({ level: 'silent' }) }
+      browser: ["Mtaani Cloud", "Chrome", "1.0"]
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    if (!sock.authState.creds.registered) {
-      const code = await sock.requestPairingCode(number.replace(/[^0-9]/g,''));
-      console.log(`Pair code for ${number}: ${code}`);
-      return res.json({ pairCode: code, number });
-    } else {
-      return res.json({ message: 'Already paired', number });
-    }
+    // Wait 3 seconds then request pair code
+    await delay(3000);
+    
+    let code = await sock.requestPairingCode(number);
+    code = code?.match(/.{1,4}/g)?.join('-') || code;
+    
+    console.log(`Pair code for ${number}: ${code}`);
+    
+    res.json({ code: code, pairCode: code, number: number, status: 'generated' });
+
+    // Close socket after 60 sec
+    setTimeout(() => {
+      try { sock.ws.close(); } catch(e) {}
+    }, 60000);
+
   } catch (e) {
-    console.log(e);
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    res.status(500).json({ error: 'Failed to generate: ' + e.message });
   }
 });
 
-app.listen(PORT, () => console.log(`Engineer Board running on ${PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Board LIVE on', PORT));
