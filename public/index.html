@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mtaani Cloud - Deploy Anything</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,Arial}
+body{background:#0a0a0a;color:#fff;padding-bottom:90px}
+.header{padding:20px;display:flex;justify-content:space-between;align-items:center}
+.badge{background:#1a1a1a;border:1px solid #222;padding:8px 12px;border-radius:20px;font-size:12px}
+.wallet{background:linear-gradient(135deg,#ffcc00,#ff9500);color:#000;margin:15px;padding:20px;border-radius:20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.wallet h2{font-size:28px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:15px}
+.card{background:#151515;border:1px solid #222;border-radius:18px;padding:18px 10px;text-align:center;cursor:pointer}
+.card i{font-size:22px;margin-bottom:8px;display:block}
+.card span{font-size:11px;color:#aaa;display:block;margin-top:4px}
+.card b{font-size:12px}
+.blue{color:#3b82f6}.green{color:#22c55e}.gold{color:#ffcc00}.purple{color:#a855f7}.red{color:#ef4444}.cyan{color:#06b6d4}
+.section{padding:0 15px;margin-top:10px}
+.row{background:#151515;border:1px solid #222;border-radius:14px;padding:15px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;cursor:pointer}
+.nav{position:fixed;bottom:15px;left:15px;right:15px;background:#151515ee;border:1px solid #222;border-radius:25px;display:flex;justify-content:space-around;padding:12px;backdrop-filter:blur(10px);z-index:100}
+.nav i{font-size:18px;color:#666;cursor:pointer;padding:10px}
+.nav .active{color:#ffcc00}
+.fab{background:#ffcc00;color:#000;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:-35px;border:4px solid #0a0a0a;cursor:pointer}
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);z-index:200;display:none;align-items:flex-end}
+.modal.active{display:flex}
+.modal-box{background:#151515;border:1px solid #222;border-radius:25px 25px 0 0;width:100%;padding:25px;max-height:85vh;overflow:auto}
+.input{background:#0a0a0a;border:1px solid #222;padding:14px;border-radius:12px;width:100%;color:#fff;margin:10px 0;font-size:16px}
+.btn{background:#ffcc00;color:#000;border:none;padding:14px;border-radius:12px;width:100%;font-weight:bold;font-size:15px;margin-top:10px;cursor:pointer}
+.btn-outline{background:transparent;border:1px solid #222;color:#fff}
+.status{margin-top:10px;padding:10px;border-radius:10px;text-align:center;font-weight:700;display:none}
+.ok{background:#dcfce7;color:#166534}.wait{background:#fef9c3;color:#854d0e}.err{background:#fee2e2;color:#991b1b}
+.label{font-size:11px;color:#888;margin:12px 0 0 2px;display:block;text-transform:uppercase;letter-spacing:0.5px}
+.pair-box{background:#0a0a0a;border:1px dashed #ffcc00;padding:15px;border-radius:12px;margin:10px 0;text-align:center;display:none}
+.pair-code{font-size:32px;font-weight:bold;letter-spacing:3px;color:#ffcc00;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="header">
+<div><h3>Mtaani Cloud</h3><small style="color:#666">Welcome, Boss</small></div>
+<div class="badge"><i class="fa-solid fa-fire" style="color:#ff6a00"></i> LIVE</div>
+</div>
+<div class="wallet" onclick="openFund()">
+<div><small style="opacity:0.7">WALLET BALANCE</small><h2 id="bal">KSh 0.00</h2><small id="uidLabel">Loading...</small></div>
+<div style="background:#000;color:#ffcc00;padding:10px 15px;border-radius:20px;font-weight:bold">+ Fund</div>
+</div>
+<div class="section"><b>QUICK LAUNCH</b></div>
+<div class="grid">
+<div class="card" onclick="openDeploy()"><i class="fa-brands fa-whatsapp green"></i><b>Deploy Bot</b><span>WhatsApp</span></div>
+<div class="card" onclick="openMyBots()"><i class="fa-solid fa-robot purple"></i><b>My Bots</b><span id="botCount">0 Active</span></div>
+<div class="card" onclick="toast('Bot Market coming soon')"><i class="fa-solid fa-store blue"></i><b>Bot Market</b><span>Buy Bots</span></div>
+<div class="card" onclick="toast('VPS from KSh 299/mo')"><i class="fa-solid fa-server gold"></i><b>VPS</b><span>From 299</span></div>
+<div class="card" onclick="toast('Websites Hosting 999/year')"><i class="fa-solid fa-globe cyan"></i><b>Websites</b><span>Hosting</span></div>
+<div class="card" onclick="toast('Numbers USA/UK 1500')"><i class="fa-solid fa-sim-card red"></i><b>Numbers</b><span>USA/UK</span></div>
+</div>
+<div class="modal" id="deployModal" onclick="if(event.target==this)closeAll()">
+<div class="modal-box">
+<h3>🚀 Deploy WhatsApp Bot</h3>
+<p style="color:#666;font-size:12px;margin:8px 0">Fill all fields correctly</p>
+<span class="label">1. Bot Name</span>
+<input class="input" id="botName" placeholder="e.g. Mtaani Bot">
+<span class="label">2. Bot Number (Must start with 254)</span>
+<input class="input" id="botNumber" placeholder="254703182307" type="tel">
+<small style="color:gray;margin-left:2px">Example: 254712345678 - Do not start with 0</small>
+<button class="btn" id="pairBtn" onclick="getPairCode()" style="background:#22c55e;color:#fff"><i class="fa-solid fa-link"></i> GET PAIR CODE</button>
+<div id="pairBox" class="pair-box">
+<small style="color:#888">YOUR PAIR CODE:</small>
+<div id="pairCodeDisplay" class="pair-code">---- ----</div>
+<small style="color:#22c55e">Go to WhatsApp > Linked Devices > Link with Phone Number > Enter code</small>
+<button class="btn btn-outline" onclick="copyPairCode()" style="margin-top:10px">📋 Copy Code</button>
+</div>
+<div id="pairStatus" class="status"></div>
+<span class="label">3. Pair Code / Session ID / Recovery Key</span>
+<input class="input" id="sessionId" placeholder="e.g. MTAANI~aBcD... or R8TM-A5BL or mtaani_rec_... - Leave empty if using Pair Code above">
+<small style="color:#22c55e;display:block;margin:5px 2px">
+💡 New Deployment: Leave empty > Click GET PAIR CODE above > Deploy<br>
+♻️ Recovery: If bot logged out, click RECOVER below
+</small>
+<button class="btn btn-outline" onclick="recoverBot()" style="border-color:#22c55e;color:#22c55e">
+<i class="fa-solid fa-rotate"></i> ♻️ RECOVER MY BOT
+</button>
+<div style="background:#0a0a0a;border:1px solid #222;padding:12px;border-radius:12px;margin:15px 0">
+<small style="color:#ffcc00">📖 HOW IT WORKS:</small><br>
+<small style="color:#888">1. Enter number starting with 254<br>2. Click GET PAIR CODE<br>3. Code will auto-fill above<br>4. WhatsApp > Linked Devices > Link with phone number > Enter code<br>5. Click DEPLOY NOW</small>
+</div>
+<p style="color:#888;font-size:12px">Cost: KSh 50 per deployment.</p>
+<button class="btn" onclick="deployBot()">🚀 Deploy Now</button>
+<button class="btn btn-outline" onclick="closeAll()">Cancel</button>
+</div>
+</div>
+<div class="modal" id="fundModal" onclick="if(event.target==this)closeAll()">
+<div class="modal-box">
+<h3>Fund Wallet - TILL 3624692</h3>
+<input id="fundPhone" class="input" placeholder="Your Phone 07...">
+<input id="fundAmount" class="input" type="number" placeholder="Amount (min 100)">
+<div style="background:#0a0a0a;border:1px dashed #ffcc00;padding:15px;border-radius:12px;margin:10px 0">
+<small>Pay via M-Pesa Buy Goods Till: 3624692<br>Amount: <span id="showAmt">0</span></small>
+</div>
+<input id="mpesaCode" class="input" placeholder="M-Pesa Code e.g. QGH7XY...">
+<button class="btn" id="submitBtn" onclick="submitFund()">✅ I Have Paid</button>
+<div id="fundStatus" class="status"></div>
+<button class="btn btn-outline" onclick="closeAll()">Cancel</button>
+</div>
+</div>
+<div class="nav">
+<i class="fa-solid fa-house active" onclick="closeAll()"></i>
+<i class="fa-solid fa-compass"></i>
+<div class="fab" onclick="openDeploy()"><i class="fa-solid fa-plus" style="color:#000"></i></div>
+<i class="fa-solid fa-trophy" onclick="openMyBots()"></i>
+<i class="fa-solid fa-user" onclick="openFund()"></i>
+</div>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBhgl5VUMu0dglRC-mNBX6OiGsrCcp2EDc",
+  authDomain: "mtaani-cloud.firebaseapp.com",
+  databaseURL: "https://mtaani-cloud-default-rtdb.firebaseio.com",
+  projectId: "mtaani-cloud",
+  storageBucket: "mtaani-cloud.firebasestorage.app",
+  messagingSenderId: "250933958579",
+  appId: "1:250933958579:web:d32e24df7d1b49af125dc6",
+  measurementId: "G-HL621Z2CVS"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let userId = localStorage.getItem('mtaani_userId');
+if(!userId){ userId = 'user_' + Math.random().toString(36).substring(2,9); localStorage.setItem('mtaani_userId', userId); }
+let savedPhone = localStorage.getItem('mtaani_phone')||'';
+document.getElementById('uidLabel').innerText = 'ID: '+userId + (savedPhone? ' • '+savedPhone : '');
+if(savedPhone) document.getElementById('fundPhone').value = savedPhone;
+let balance = parseInt(localStorage.getItem('mtaani_balance')||'0');
+document.getElementById('bal').innerText='KSh '+balance+'.00';
+function updateBal(){ document.getElementById('bal').innerText='KSh '+balance+'.00'; let bots = JSON.parse(localStorage.getItem('my_bots')||'[]'); document.getElementById('botCount').innerText= bots.length+' Active'; }
+updateBal();
+function openFund(){ document.getElementById('fundModal').classList.add('active'); }
+function openDeploy(){ document.getElementById('deployModal').classList.add('active'); }
+function openMyBots(){ let bots = JSON.parse(localStorage.getItem('my_bots')||'[]'); if(!bots.length) return alert('No bots yet.'); alert('MY BOTS:\n\n'+bots.map(b=>`🤖 ${b.name}\n📱 ${b.number}\n✅ ${b.status}`).join('\n\n')); }
+function closeAll(){ document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active')); }
+function toast(m){ alert(m); }
+document.getElementById('fundAmount')?.addEventListener('input', e=>{ document.getElementById('showAmt').innerText = e.target.value || '0'; });
+const ENGINEER_BOARD = 'https://mtaani-engineer-board.onrender.com';
+let lastPairCode = '';
+async function getPairCode(){
+ let number = document.getElementById('botNumber').value.trim();
+ if(!number) return alert('Enter Bot Number first! 254...');
+ if(!number.startsWith('254') || number.length < 12) return alert('Number must start with 254 and be 12 digits. You entered: '+number);
+ const btn = document.getElementById('pairBtn'); const st = document.getElementById('pairStatus'); const box = document.getElementById('pairBox');
+ btn.disabled = true; btn.innerHTML = '⏳ Generating...'; st.style.display = 'block'; st.className = 'status wait'; st.innerText = 'Connecting to server...'; box.style.display = 'none';
+ try {
+   const res = await fetch(ENGINEER_BOARD + '/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number }) });
+   const data = await res.json(); if(!res.ok) throw new Error(data.error||'Failed');
+   lastPairCode = data.code || data.pairCode || ''; document.getElementById('pairCodeDisplay').innerText = lastPairCode; box.style.display = 'block'; st.className = 'status ok'; st.innerText = '✅ Code Generated! Enter in WhatsApp now!'; document.getElementById('sessionId').value = lastPairCode;
+ } catch(e){ st.className = 'status err'; st.innerText = '❌ Error: '+ e.message; } finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-link"></i> GET PAIR CODE'; }
+}
+function copyPairCode(){ if(!lastPairCode) return alert('No code!'); navigator.clipboard.writeText(lastPairCode).then(()=>toast('Copied: '+lastPairCode)); }
+async function recoverBot(){
+  let number = document.getElementById('botNumber').value.trim();
+  if(!number || !number.startsWith('254')) return alert('Enter number 254... first!');
+  const st = document.getElementById('pairStatus'); st.style.display='block'; st.className='status wait'; st.innerText='♻️ Checking backup for '+number+'...';
+  try{
+    const res = await fetch(ENGINEER_BOARD + '/recover/' + number);
+    const data = await res.json();
+    if(data.creds){ document.getElementById('sessionId').value = data.creds; st.className='status ok'; st.innerText='✅ Recovery Found! Click DEPLOY NOW'; }
+    else throw new Error(data.error||'No backup');
+  } catch(e){ st.className='status err'; st.innerText='❌ No backup found - Use GET PAIR CODE'; }
+}
+function submitFund(){
+ let amt = document.getElementById('fundAmount').value; let code = document.getElementById('mpesaCode').value.toUpperCase().trim(); let phone = document.getElementById('fundPhone').value.trim();
+ if(!phone || phone.length<9) return alert('Enter phone!'); if(!amt || amt<100) return alert('Min 100'); if(!code || code.length<8) return alert('Enter Code!');
+ localStorage.setItem('mtaani_phone', phone); document.getElementById('submitBtn').disabled=true;
+ const st = document.getElementById('fundStatus'); st.style.display='block'; st.className='status wait'; st.innerText='Sending...';
+ db.ref('requests').push({ amount: Number(amt), code, phone, userId, status: 'PENDING', createdAt: Date.now() }).then(()=>{ st.className='status ok'; st.innerText='✅ Sent!'; }).catch(e=>{ st.className='status err'; st.innerText=e.message; }).finally(()=>{ document.getElementById('submitBtn').disabled=false; });
+}
+function deployBot(){
+ let name = document.getElementById('botName').value.trim(); let number = document.getElementById('botNumber').value.trim(); let sess = document.getElementById('sessionId').value.trim();
+ if(!name) return alert('Enter Bot Name!'); if(!number.startsWith('254') || number.length<12) return alert('Number must be 254... 12 digits'); if(!sess) return alert('Enter Pair Code! Click GET PAIR CODE first');
+ if(balance < 50) return alert('Insufficient balance! Need 50, you have '+balance);
+ let bots = JSON.parse(localStorage.getItem('my_bots')||'[]'); bots.push({name, number, session:sess, status:'ACTIVE', time:Date.now()}); localStorage.setItem('my_bots', JSON.stringify(bots)); balance-=50; localStorage.setItem('mtaani_balance', balance); updateBal(); alert('🚀 Bot Deployed: '+name); closeAll();
+}
+</script>
+</body>
+                                                                                                  </html>
